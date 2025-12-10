@@ -1,0 +1,199 @@
+
+import React, { useMemo } from 'react';
+import { ProjectFeature } from '../types';
+import { COLORS } from '../constants';
+import { Calendar, CheckCircle, Clock, AlertCircle, ChevronRight, FileText } from 'lucide-react';
+
+interface ProjectTimelineProps {
+  data: ProjectFeature[];
+  selectedId: string | null;
+  onSelectProject: (id: string) => void;
+}
+
+interface TimelineEvent {
+  id: string;
+  category: string;
+  title: string;
+  date: Date | null;
+  originalText: string;
+  statusType: 'approved' | 'submitted' | 'pending' | 'rejected' | 'draft' | 'not-applicable';
+}
+
+const ProjectTimeline: React.FC<ProjectTimelineProps> = ({ data, selectedId, onSelectProject }) => {
+  const selectedProject = useMemo(() => 
+    data.find(p => p.id === selectedId) || data[0], 
+    [data, selectedId]
+  );
+
+  const events = useMemo(() => {
+    if (!selectedProject) return [];
+
+    const categories = [
+      { key: 's3rStatus', title: 'S3R Submission', type: selectedProject.s3rCategory },
+      { key: 'stlaXpStatus', title: 'STLA / XP Application', type: selectedProject.stlaCategory },
+      { key: 'accessPermission', title: 'Access Permission', type: 'pending' }, // inferring type
+      { key: 'engineeringPlan', title: 'Engineering Plan', type: 'submitted' }, // inferring type
+      { key: 'tprpStatus', title: 'TPRP', type: 'pending' },
+      { key: 'hsspStatus', title: 'HSSP', type: 'pending' }
+    ];
+
+    const parsedEvents: TimelineEvent[] = [];
+
+    // Regex to match dates like "15 Aug 2025", "Aug 2025", "15-Aug-2025"
+    const dateRegex = /(\d{1,2}[\s-]*)?(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*([\s-]*\d{1,2})?[\s,]+(\d{4})/i;
+
+    categories.forEach(cat => {
+      const text = (selectedProject as any)[cat.key] as string;
+      if (!text || text === 'N/A') return;
+
+      const match = text.match(dateRegex);
+      let date: Date | null = null;
+
+      if (match) {
+        // Construct a parsable date string
+        // match[0] is the full matched string e.g. "16 Jul 2024"
+        date = new Date(match[0]);
+      }
+
+      parsedEvents.push({
+        id: cat.key,
+        category: cat.key,
+        title: cat.title,
+        date: date,
+        originalText: text,
+        statusType: cat.type as any
+      });
+    });
+
+    // Sort: Dated events first (chronological), then undated
+    return parsedEvents.sort((a, b) => {
+      if (a.date && b.date) return a.date.getTime() - b.date.getTime();
+      if (a.date) return -1;
+      if (b.date) return 1;
+      return 0;
+    });
+
+  }, [selectedProject]);
+
+  const formatDate = (date: Date | null) => {
+    if (!date) return 'Date Pending';
+    return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  };
+
+  const getStatusIcon = (type: string) => {
+    switch (type) {
+      case 'approved': return <CheckCircle className="w-5 h-5 text-emerald-500" />;
+      case 'rejected': return <AlertCircle className="w-5 h-5 text-red-500" />;
+      case 'submitted': return <FileText className="w-5 h-5 text-blue-500" />;
+      default: return <Clock className="w-5 h-5 text-amber-500" />;
+    }
+  };
+
+  const getStatusColor = (type: string) => {
+      return COLORS[type as keyof typeof COLORS] || '#9ca3af';
+  };
+
+  return (
+    <div className="flex flex-col h-full bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      {/* Header with Project Selector */}
+      <div className="p-6 border-b border-gray-100 bg-gray-50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h2 className="text-lg font-bold text-gray-800">Project Timeline</h2>
+          <p className="text-sm text-gray-500">Milestones & Key Events</p>
+        </div>
+        
+        <div className="relative min-w-[300px]">
+          <select 
+            className="w-full pl-4 pr-10 py-2 border border-gray-200 rounded-lg appearance-none bg-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            value={selectedProject?.id || ''}
+            onChange={(e) => onSelectProject(e.target.value)}
+          >
+            {data.map(p => (
+              <option key={p.id} value={p.id}>
+                {p.featureNo} - {p.location.substring(0, 30)}...
+              </option>
+            ))}
+          </select>
+          <ChevronRight className="absolute right-3 top-2.5 w-4 h-4 text-gray-400 rotate-90 pointer-events-none" />
+        </div>
+      </div>
+
+      {/* Timeline Content */}
+      <div className="flex-1 overflow-auto p-6 md:p-8 custom-scrollbar">
+        {selectedProject ? (
+          <div className="max-w-3xl mx-auto">
+             <div className="mb-8 p-4 bg-blue-50 rounded-lg border border-blue-100">
+                <h3 className="font-semibold text-blue-900 mb-1">{selectedProject.featureNo}</h3>
+                <p className="text-sm text-blue-700">{selectedProject.location}</p>
+             </div>
+
+            <div className="relative">
+              {/* Vertical Line */}
+              <div className="absolute left-8 md:left-1/2 top-0 bottom-0 w-0.5 bg-gray-200 transform -translate-x-1/2"></div>
+
+              <div className="space-y-12">
+                {events.map((event, index) => {
+                  const isLeft = index % 2 === 0;
+                  const color = getStatusColor(event.statusType);
+
+                  return (
+                    <div key={index} className={`relative flex items-center ${isLeft ? 'md:flex-row-reverse' : ''}`}>
+                      
+                      {/* Date Label (Desktop) */}
+                      <div className="hidden md:block w-1/2 px-8 text-right">
+                         <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold ${isLeft ? 'flex-row-reverse' : ''}`} 
+                              style={{ backgroundColor: `${color}20`, color: color }}>
+                            <Calendar className="w-3 h-3" />
+                            {formatDate(event.date)}
+                         </div>
+                      </div>
+
+                      {/* Center Node */}
+                      <div className="absolute left-8 md:left-1/2 transform -translate-x-1/2 flex items-center justify-center w-8 h-8 rounded-full bg-white border-4 border-gray-100 shadow-sm z-10">
+                        {getStatusIcon(event.statusType)}
+                      </div>
+
+                      {/* Content Card */}
+                      <div className="ml-16 md:ml-0 w-full md:w-1/2 px-4 md:px-8">
+                         {/* Mobile Date */}
+                         <div className="md:hidden mb-2 inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-600">
+                            <Calendar className="w-3 h-3" />
+                            {formatDate(event.date)}
+                         </div>
+
+                         <div className="bg-white p-5 rounded-lg border border-gray-100 shadow-sm hover:shadow-md transition-shadow relative">
+                            {/* Arrow */}
+                            <div className={`hidden md:block absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white border-l border-b border-gray-100 transform rotate-45 ${isLeft ? 'right-[-7px] border-r-0 border-t-0' : 'left-[-7px] border-l border-b'}`}></div>
+                            
+                            <h4 className="font-bold text-gray-800 text-sm mb-1">{event.title}</h4>
+                            <p className="text-gray-600 text-sm leading-relaxed">{event.originalText}</p>
+                            {!event.date && (
+                                <span className="inline-block mt-3 text-[10px] uppercase tracking-wider text-gray-400 font-medium">
+                                    Date Pending
+                                </span>
+                            )}
+                         </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              
+              {events.length === 0 && (
+                  <div className="text-center py-12 text-gray-500">
+                      No timeline events found for this project.
+                  </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center justify-center h-full text-gray-400">
+            Select a project to view timeline
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default ProjectTimeline;
