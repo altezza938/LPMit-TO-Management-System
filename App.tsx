@@ -3,17 +3,32 @@ import Dashboard from './components/Dashboard';
 import ProjectList from './components/ProjectList';
 import ProjectMap from './components/ProjectMap';
 import ProjectTimeline from './components/ProjectTimeline';
+import LoginScreen from './components/LoginScreen';
 import { MOCK_DATA, AGREEMENTS } from './constants';
 import { ProjectFeature } from './types';
-import { LayoutDashboard, Mountain, Bell, ChevronDown, Map as MapIcon, CalendarRange, Table2, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Mountain, Bell, ChevronDown, Map as MapIcon, CalendarRange, Table2, Menu, X, LogOut } from 'lucide-react';
 
 type View = 'dashboard' | 'list' | 'table' | 'timeline';
 
 const App: React.FC = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [currentUser, setCurrentUser] = useState<string | null>(null);
   const [currentView, setCurrentView] = useState<View>('dashboard');
   const [selectedFeatureId, setSelectedFeatureId] = useState<string | null>(null);
   const [projects, setProjects] = useState<ProjectFeature[]>(MOCK_DATA);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const handleLogin = (username: string) => {
+    setIsAuthenticated(true);
+    setCurrentUser(username);
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    setCurrentUser(null);
+    setCurrentView('dashboard');
+    setSelectedFeatureId(null);
+  };
 
   const handleFeatureSelect = (id: string) => {
     setSelectedFeatureId(id);
@@ -37,6 +52,10 @@ const App: React.FC = () => {
     table: 'Summary Table of Draft Task Orders',
     timeline: 'Milestone Timeline',
   };
+
+  if (!isAuthenticated) {
+    return <LoginScreen onLogin={handleLogin} />;
+  }
 
   return (
     <div className="min-h-screen bg-[#f8fafc] flex">
@@ -94,11 +113,18 @@ const App: React.FC = () => {
           ))}
         </nav>
 
-        <div className="p-4 border-t border-gray-800">
+        <div className="p-4 border-t border-gray-800 space-y-3">
           <div className="px-4 py-2 text-xs text-gray-500">
             <p>LPMit Programme</p>
             <p className="text-gray-600 mt-1">CEDD/GEO/LPM</p>
           </div>
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-gray-400 hover:bg-red-900/30 hover:text-red-300 transition-all duration-200"
+          >
+            <LogOut className="w-5 h-5" />
+            <span className="font-medium text-sm">Sign Out</span>
+          </button>
         </div>
       </aside>
 
@@ -136,10 +162,10 @@ const App: React.FC = () => {
             </button>
             <div className="flex items-center gap-2 pl-4 border-l border-gray-200">
               <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-xs">
-                AE
+                {(currentUser || 'U')[0].toUpperCase()}
               </div>
               <div className="hidden sm:block text-sm">
-                <p className="font-medium text-gray-700 text-xs">AECOM Team</p>
+                <p className="font-medium text-gray-700 text-xs">{currentUser}</p>
                 <p className="text-[10px] text-gray-500">Project Manager</p>
               </div>
               <ChevronDown className="w-4 h-4 text-gray-400 cursor-pointer" />
