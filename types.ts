@@ -105,3 +105,8 @@ export interface GIRequestLimit {
   toValue: number;
   status: string;
 }
+
+export interface UserCredentials {
+  username: string;
+  passwordHash: string;
+}

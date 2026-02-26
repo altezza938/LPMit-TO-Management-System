@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { ProjectFeature, TaskOrder, Invoice, WorksContract, Agreement, FastTrackOpportunity, ExpenditureItem, GIRequestLimit } from './types';
+import { ProjectFeature, TaskOrder, Invoice, WorksContract, Agreement, FastTrackOpportunity, ExpenditureItem, GIRequestLimit, UserCredentials } from './types';
 import { MOCK_DATA, AGREEMENTS, MOCK_INVOICES, FAST_TRACK_OPPORTUNITIES, CONTRACT_EXPENDITURES, GI_REQUEST_QUOTAS } from './constants';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -13,6 +13,7 @@ interface AppState {
     fastTrackOpportunities: FastTrackOpportunity[];
     contractExpenditures: ExpenditureItem[];
     giRequests: GIRequestLimit[];
+    credentials?: UserCredentials;
 }
 
 interface AppContextType {
@@ -34,7 +35,7 @@ interface AppContextType {
     updateContract: (contract: WorksContract) => void;
     addContract: (contract: WorksContract) => void;
     deleteContract: (id: string) => void;
-
+    updateCredentials: (creds: UserCredentials) => void;
     exportData: () => void;
     importData: (jsonData: string) => void;
 }
@@ -79,7 +80,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             ],
             fastTrackOpportunities: FAST_TRACK_OPPORTUNITIES,
             contractExpenditures: CONTRACT_EXPENDITURES,
-            giRequests: GI_REQUEST_QUOTAS
+            giRequests: GI_REQUEST_QUOTAS,
+            credentials: { username: 'admin', passwordHash: '123' } // Basic plain-text password init for MVP bypass
         };
     });
 
@@ -131,6 +133,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setState(prev => ({ ...prev, contracts: prev.contracts.filter(c => c.id !== id) }));
     };
 
+    const updateCredentials = (creds: UserCredentials) => {
+        setState(prev => ({ ...prev, credentials: creds }));
+    };
+
     const exportData = () => {
         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state));
         const downloadAnchorNode = document.createElement('a');
@@ -162,6 +168,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             updateTaskOrder, addTaskOrder, deleteTaskOrder,
             updateInvoice, addInvoice, deleteInvoice,
             updateContract, addContract, deleteContract,
+            updateCredentials,
             exportData, importData
         }}>
             {children}

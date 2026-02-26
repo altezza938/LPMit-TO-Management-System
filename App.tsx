@@ -10,8 +10,9 @@ import TaskOrderManager from './components/TaskOrderManager';
 import InvoiceTracker from './components/InvoiceTracker';
 import ContractMonitor from './components/ContractMonitor';
 import ContractDetails from './components/ContractDetails';
+import Settings from './components/Settings';
 import { useAppContext } from './AppContext';
-import { LayoutDashboard, Mountain, Bell, ChevronDown, Map as MapIcon, CalendarRange, Table2, Menu, X, LogOut, CheckSquare, Briefcase, FileText, FileSignature } from 'lucide-react';
+import { LayoutDashboard, Mountain, Bell, ChevronDown, Map as MapIcon, CalendarRange, Table2, Menu, X, LogOut, CheckSquare, Briefcase, FileText, FileSignature, Settings as SettingsIcon } from 'lucide-react';
 
 const MainLayout: React.FC<{ currentUser: string | null; handleLogout: () => void }> = ({ currentUser, handleLogout }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -44,6 +45,7 @@ const MainLayout: React.FC<{ currentUser: string | null; handleLogout: () => voi
     { path: '/timeline', icon: CalendarRange, label: 'Timeline' },
     { path: '/invoices', icon: FileText, label: 'Invoices & Payments' },
     { path: '/contracts', icon: FileSignature, label: 'Works & GI Contracts' },
+    { path: '/settings', icon: SettingsIcon, label: 'Settings' }
   ];
 
   const currentNav = navItems.find(item => location.pathname.startsWith(item.path));
@@ -284,6 +286,12 @@ const MainLayout: React.FC<{ currentUser: string | null; handleLogout: () => voi
 
             <Route path="/contracts/:id" element={
               <ContractDetails />
+            } />
+
+            <Route path="/settings" element={
+              <div className="p-4 md:p-6 h-full">
+                <Settings />
+              </div>
             } />
 
           </Routes>

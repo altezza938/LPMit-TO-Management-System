@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import { Mountain, Lock, User, Eye, EyeOff } from 'lucide-react';
+import { useAppContext } from '../AppContext';
 
 interface LoginScreenProps {
   onLogin: (username: string) => void;
 }
 
 const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
+  const { state } = useAppContext();
+
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -18,7 +21,10 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
     setIsLoading(true);
 
     setTimeout(() => {
-      if (username === 'admin' && password === '123') {
+      const validUsername = state.credentials?.username || 'admin';
+      const validPassword = state.credentials?.passwordHash || '123';
+
+      if (username === validUsername && password === validPassword) {
         onLogin(username);
       } else {
         setError('Invalid username or password');
