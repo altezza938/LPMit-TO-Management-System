@@ -11,6 +11,7 @@ import InvoiceTracker from './components/InvoiceTracker';
 import ContractMonitor from './components/ContractMonitor';
 import ContractDetails from './components/ContractDetails';
 import Settings from './components/Settings';
+import FeatureEditor from './components/FeatureEditor';
 import { useAppContext } from './AppContext';
 import { LayoutDashboard, Mountain, Bell, ChevronDown, Map as MapIcon, CalendarRange, Table2, Menu, X, LogOut, CheckSquare, Briefcase, FileText, FileSignature, Settings as SettingsIcon } from 'lucide-react';
 
@@ -291,6 +292,12 @@ const MainLayout: React.FC<{ currentUser: string | null; handleLogout: () => voi
             <Route path="/settings" element={
               <div className="p-4 md:p-6 h-full">
                 <Settings />
+              </div>
+            } />
+
+            <Route path="/feature/:id/edit" element={
+              <div className="p-4 md:p-6 h-full">
+                <FeatureEditor />
               </div>
             } />
 

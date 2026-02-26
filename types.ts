@@ -29,6 +29,7 @@ export interface ProjectFeature {
   accepted: boolean;
   acceptedDate?: string;
   acceptedBy?: string;
+  documents?: { name: string; url: string; date: string }[];
 }
 
 export interface TaskOrder {

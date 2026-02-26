@@ -14,11 +14,19 @@ interface AppState {
     contractExpenditures: ExpenditureItem[];
     giRequests: GIRequestLimit[];
     credentials?: UserCredentials;
+    columnOrder?: string[];
 }
 
 interface AppContextType {
     state: AppState;
     setActiveAgreementId: (id: string | null) => void;
+    // History
+    undoStack: ProjectFeature[][];
+    redoStack: ProjectFeature[][];
+    undo: () => void;
+    redo: () => void;
+    pushHistory: () => void;
+    updateColumnOrder: (order: string[]) => void;
     // Features
     updateFeature: (feature: ProjectFeature) => void;
     addFeature: (feature: ProjectFeature) => void;
@@ -55,6 +63,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             console.error("Failed to parse stored state", e);
         }
 
+        const defaultCols = ['featureNo', 's3r', 'stla', 'access', 'engPlan', 'tprp', 'hssp', 'actions'];
+
+
         // Default initial state
         const initialAgreements = [
             ...AGREEMENTS,
@@ -81,13 +92,48 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             fastTrackOpportunities: FAST_TRACK_OPPORTUNITIES,
             contractExpenditures: CONTRACT_EXPENDITURES,
             giRequests: GI_REQUEST_QUOTAS,
-            credentials: { username: 'admin', passwordHash: '123' } // Basic plain-text password init for MVP bypass
+            credentials: { username: 'admin', passwordHash: '123' }, // Basic plain-text password init for MVP bypass
+            columnOrder: defaultCols
         };
     });
 
+    const [undoStack, setUndoStack] = useState<ProjectFeature[][]>([]);
+    const [redoStack, setRedoStack] = useState<ProjectFeature[][]>([]);
+
     useEffect(() => {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        if (state) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        }
     }, [state]);
+
+    const pushHistory = () => {
+        setUndoStack(prev => [...prev, state.features]);
+        setRedoStack([]); // clear redo stack on new action
+    };
+
+    const undo = () => {
+        if (undoStack.length === 0) return;
+        const prevFeatures = undoStack[undoStack.length - 1];
+
+        setRedoStack(prev => [...prev, state.features]);
+        setUndoStack(prev => prev.slice(0, prev.length - 1));
+
+        setState(prev => ({ ...prev, features: prevFeatures }));
+    };
+
+    const redo = () => {
+        if (redoStack.length === 0) return;
+        const nextFeatures = redoStack[redoStack.length - 1];
+
+        setUndoStack(prev => [...prev, state.features]);
+        setRedoStack(prev => prev.slice(0, prev.length - 1));
+
+        setState(prev => ({ ...prev, features: nextFeatures }));
+    };
+
+    const updateColumnOrder = (order: string[]) => {
+        setState(prev => ({ ...prev, columnOrder: order }));
+    };
 
     const setActiveAgreementId = (id: string | null) => {
         setState(prev => ({ ...prev, activeAgreementId: id }));
@@ -164,6 +210,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         <AppContext.Provider value={{
             state,
             setActiveAgreementId,
+            undoStack, redoStack, undo, redo, pushHistory, updateColumnOrder,
             updateFeature, addFeature, deleteFeature,
             updateTaskOrder, addTaskOrder, deleteTaskOrder,
             updateInvoice, addInvoice, deleteInvoice,
