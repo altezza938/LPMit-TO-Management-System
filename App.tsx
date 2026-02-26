@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import Dashboard from './components/Dashboard';
 import ProjectList from './components/ProjectList';
 import ProjectMap from './components/ProjectMap';
@@ -320,9 +320,9 @@ const App: React.FC = () => {
   }
 
   return (
-    <BrowserRouter basename="/LPMit-TO-Management-System">
+    <HashRouter>
       <MainLayout currentUser={currentUser} handleLogout={handleLogout} />
-    </BrowserRouter>
+    </HashRouter>
   );
 };
 
