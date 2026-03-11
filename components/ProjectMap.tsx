@@ -16,7 +16,7 @@ const ProjectMap: React.FC<ProjectMapProps> = ({ data, selectedId, onSelectFeatu
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
-    const map = L.map(containerRef.current).setView([22.38, 114.05], 11);
+    const map = L.map(containerRef.current).setView([22.32, 114.15], 11);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
@@ -32,6 +32,13 @@ const ProjectMap: React.FC<ProjectMapProps> = ({ data, selectedId, onSelectFeatu
       }
     };
   }, []);
+
+  // Fit map bounds when data changes (e.g. agreement switch)
+  useEffect(() => {
+    if (!mapRef.current || data.length === 0) return;
+    const bounds = L.latLngBounds(data.map(d => [d.coordinates.lat, d.coordinates.lng]));
+    mapRef.current.fitBounds(bounds, { padding: [30, 30], maxZoom: 14 });
+  }, [data.length > 0 ? data[0].agreement : '']);
 
   useEffect(() => {
     if (!mapRef.current) return;

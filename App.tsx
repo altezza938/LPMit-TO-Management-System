@@ -6,7 +6,7 @@ import ProjectTimeline from './components/ProjectTimeline';
 import LoginScreen from './components/LoginScreen';
 import { MOCK_DATA, AGREEMENTS } from './constants';
 import { ProjectFeature } from './types';
-import { LayoutDashboard, Mountain, Bell, ChevronDown, Map as MapIcon, CalendarRange, Table2, Menu, X, LogOut, CheckSquare } from 'lucide-react';
+import { LayoutDashboard, Mountain, Bell, ChevronDown, Map as MapIcon, CalendarRange, Table2, Menu, X, LogOut, CheckSquare, Building2 } from 'lucide-react';
 
 type View = 'dashboard' | 'list' | 'table' | 'timeline';
 
@@ -48,6 +48,7 @@ const App: React.FC = () => {
   const [selectedFeatureId, setSelectedFeatureId] = useState<string | null>(null);
   const [projects, setProjects] = useState<ProjectFeature[]>(initializeProjects);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [selectedAgreement, setSelectedAgreement] = useState<string>(AGREEMENTS[0].name);
 
   useEffect(() => {
     saveAcceptanceState(projects);
@@ -92,6 +93,13 @@ const App: React.FC = () => {
     }));
   }, [currentUser]);
 
+  const handleAgreementChange = (agreementName: string) => {
+    setSelectedAgreement(agreementName);
+    setSelectedFeatureId(null);
+  };
+
+  const filteredProjects = projects.filter(p => p.agreement === selectedAgreement);
+
   const handleNavClick = (view: View) => {
     setCurrentView(view);
     setMobileMenuOpen(false);
@@ -104,7 +112,7 @@ const App: React.FC = () => {
     timeline: 'Milestone Timeline',
   };
 
-  const acceptedCount = projects.filter(p => p.accepted).length;
+  const acceptedCount = filteredProjects.filter(p => p.accepted).length;
 
   if (!isAuthenticated) {
     return <LoginScreen onLogin={handleLogin} />;
@@ -136,11 +144,26 @@ const App: React.FC = () => {
           </button>
         </div>
 
-        {/* Agreement Badge */}
+        {/* Agreement Selector */}
         <div className="px-4 pt-4 pb-2">
           <div className="bg-gradient-to-r from-emerald-900/60 to-emerald-800/40 border border-emerald-600/30 rounded-xl px-3.5 py-2.5 backdrop-blur-sm">
-            <p className="text-[10px] text-emerald-400 font-semibold uppercase tracking-wider">Agreement</p>
-            <p className="text-sm font-bold text-white mt-0.5">{AGREEMENTS[0].name}</p>
+            <p className="text-[10px] text-emerald-400 font-semibold uppercase tracking-wider mb-1.5">Agreement</p>
+            <div className="space-y-1.5">
+              {AGREEMENTS.map(ag => (
+                <button
+                  key={ag.id}
+                  onClick={() => handleAgreementChange(ag.name)}
+                  className={`w-full text-left px-3 py-2 rounded-lg text-sm font-bold transition-all duration-200 flex items-center gap-2 ${
+                    selectedAgreement === ag.name
+                      ? 'bg-emerald-500/30 text-white border border-emerald-400/40 shadow-sm'
+                      : 'text-gray-400 hover:text-white hover:bg-white/10 border border-transparent'
+                  }`}
+                >
+                  <Building2 className={`w-3.5 h-3.5 flex-shrink-0 ${selectedAgreement === ag.name ? 'text-emerald-400' : 'text-gray-500'}`} />
+                  {ag.name}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -154,13 +177,13 @@ const App: React.FC = () => {
               </div>
               <div className="flex items-baseline gap-1">
                 <span className="text-lg font-bold text-white">{acceptedCount}</span>
-                <span className="text-xs text-gray-500">/ {projects.length}</span>
+                <span className="text-xs text-gray-500">/ {filteredProjects.length}</span>
               </div>
             </div>
             <div className="mt-2 w-full bg-white/10 rounded-full h-1.5">
               <div
                 className="bg-gradient-to-r from-emerald-400 to-emerald-500 h-1.5 rounded-full transition-all duration-500"
-                style={{ width: `${(acceptedCount / projects.length) * 100}%` }}
+                style={{ width: `${filteredProjects.length > 0 ? (acceptedCount / filteredProjects.length) * 100 : 0}%` }}
               ></div>
             </div>
           </div>
@@ -227,7 +250,7 @@ const App: React.FC = () => {
               {viewTitles[currentView]}
             </h2>
             <span className="hidden sm:inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-              {projects.length} Features
+              {filteredProjects.length} Features
             </span>
             {acceptedCount > 0 && (
               <span className="hidden sm:inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
@@ -258,21 +281,21 @@ const App: React.FC = () => {
         <div className="flex-1 overflow-auto bg-[#f1f5f9]">
           {currentView === 'dashboard' && (
             <div className="p-4 md:p-6 max-w-7xl mx-auto">
-              <Dashboard data={projects} onFeatureSelect={handleFeatureSelect} />
+              <Dashboard data={filteredProjects} onFeatureSelect={handleFeatureSelect} />
             </div>
           )}
           {currentView === 'list' && (
             <div className="flex flex-col h-full">
               <div className="h-1/3 min-h-[280px] w-full border-b border-gray-200 shadow-sm relative z-0">
                 <ProjectMap
-                  data={projects}
+                  data={filteredProjects}
                   selectedId={selectedFeatureId}
                   onSelectFeature={handleFeatureSelect}
                 />
               </div>
               <div className="flex-1 overflow-hidden p-4 md:p-6 bg-[#f1f5f9]">
                 <ProjectList
-                  data={projects}
+                  data={filteredProjects}
                   selectedId={selectedFeatureId}
                   onSelectFeature={handleFeatureSelect}
                   onUpdateFeature={handleUpdateProject}
@@ -296,7 +319,7 @@ const App: React.FC = () => {
           {currentView === 'timeline' && (
             <div className="p-4 md:p-6 h-full">
               <ProjectTimeline
-                data={projects}
+                data={filteredProjects}
                 selectedId={selectedFeatureId}
                 onSelectProject={setSelectedFeatureId}
               />

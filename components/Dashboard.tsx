@@ -100,7 +100,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onFeatureSelect }) => {
             <h3 className="text-gray-500 text-[11px] font-semibold uppercase tracking-wide">Total TOs</h3>
           </div>
           <p className="text-3xl font-bold text-gray-900">{total}</p>
-          <p className="text-[11px] text-gray-400 mt-1 font-medium">CE 47/2022 (GE)</p>
+          <p className="text-[11px] text-gray-400 mt-1 font-medium">{data.length > 0 ? data[0].agreement : ''}</p>
         </div>
 
         {/* Accepted Card */}
