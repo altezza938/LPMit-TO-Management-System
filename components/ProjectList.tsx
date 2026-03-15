@@ -132,7 +132,17 @@ const SortableRow: React.FC<{
                     <button {...attributes} {...listeners} className="cursor-grab text-slate-300 hover:text-indigo-500 touch-none">
                         <GripVertical className="w-4 h-4" />
                     </button>
-                    <div className="text-[10px] text-slate-400 font-bold">{row.no}</div>
+                    {isEditing ? (
+                        <input
+                            type="number"
+                            min="1"
+                            className="w-10 text-[10px] text-center font-bold text-indigo-700 bg-white border border-indigo-300 rounded px-1 py-0.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            value={editForm?.no || ''}
+                            onChange={(e) => handleInputChange('no', e.target.value)}
+                        />
+                    ) : (
+                        <div className="text-[10px] text-slate-400 font-bold">{row.no}</div>
+                    )}
                 </div>
             </td>
 
@@ -218,7 +228,7 @@ const SortableRow: React.FC<{
 
 
 const ProjectList: React.FC<ProjectListProps> = ({ data, selectedId, onSelectFeature, onUpdateFeature, onToggleAccepted, fullTable }) => {
-    const { state, undoStack, redoStack, undo, redo, pushHistory } = useAppContext();
+    const { state, undoStack, redoStack, undo, redo, pushHistory, reorderFeatures } = useAppContext();
     const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -233,7 +243,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ data, selectedId, onSelectFea
 
     // Sync orderedData when source data changes
     useEffect(() => {
-        setOrderedData(data);
+        setOrderedData([...data].sort((a,b) => a.no - b.no));
     }, [data]);
 
     const sensors = useSensors(
@@ -268,7 +278,40 @@ const ProjectList: React.FC<ProjectListProps> = ({ data, selectedId, onSelectFea
         e.stopPropagation();
         if (editForm) {
             pushHistory(); // Record state before saving
-            onUpdateFeature(editForm);
+            
+            // Check if 'no' ranking was manually modified
+            const originalFeature = data.find(f => f.id === editForm.id);
+            const originalNo = originalFeature?.no;
+            const newNo = Number(editForm.no);
+            
+            if (originalNo !== undefined && newNo !== undefined && originalNo !== newNo && !isNaN(newNo)) {
+               // The ranking was edited manually.
+               // We need to move this item to the target 'newNo' position in orderedData
+               let currentItems = [...orderedData];
+               const currentIndex = currentItems.findIndex(i => i.id === editForm.id);
+               
+               if (currentIndex !== -1) {
+                   // Ensure target index is bounds-safe
+                   let targetIndex = newNo - 1; 
+                   if (targetIndex < 0) targetIndex = 0;
+                   if (targetIndex >= currentItems.length) targetIndex = currentItems.length - 1;
+                   
+                   // Move the item
+                   currentItems = arrayMove(currentItems, currentIndex, targetIndex);
+                   
+                   // Finally, we update the rest of the form fields AND reorder.
+                   // Updating the object reference in the array first
+                   currentItems[targetIndex] = editForm;
+                   
+                   reorderFeatures(currentItems);
+               } else {
+                   onUpdateFeature(editForm);
+               }
+            } else {
+               // No ranking change
+               onUpdateFeature(editForm);
+            }
+
             setEditingId(null);
             setEditForm(null);
         }
@@ -282,17 +325,23 @@ const ProjectList: React.FC<ProjectListProps> = ({ data, selectedId, onSelectFea
 
     const handleInputChange = (field: keyof ProjectFeature, value: string) => {
         if (editForm) {
-            setEditForm({ ...editForm, [field]: value });
+            setEditForm({ 
+              ...editForm, 
+              [field]: field === 'no' ? (value === '' ? '' : Number(value)) : value 
+            });
         }
     };
 
     const handleDragEndRow = (event: DragEndEvent) => {
         const { active, over } = event;
         if (over && active.id !== over.id) {
+            pushHistory();
             setOrderedData((items) => {
                 const oldIndex = items.findIndex(i => i.id === active.id);
                 const newIndex = items.findIndex(i => i.id === over.id);
-                return arrayMove(items, oldIndex, newIndex);
+                const newArray = arrayMove(items, oldIndex, newIndex);
+                reorderFeatures(newArray); // Propagate reorder to context
+                return newArray;
             });
         }
     };

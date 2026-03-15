@@ -1,6 +1,7 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import * as L from 'leaflet';
 import { ProjectFeature } from '../types';
+import { Layers } from 'lucide-react';
 
 interface ProjectMapProps {
   data: ProjectFeature[];
@@ -12,16 +13,48 @@ const ProjectMap: React.FC<ProjectMapProps> = ({ data, selectedId, onSelectFeatu
   const mapRef = useRef<L.Map | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const markersRef = useRef<{ [key: string]: L.Marker }>({});
+  const topoLayerRef = useRef<L.TileLayer | null>(null);
+  const orthoLayerRef = useRef<L.TileLayer | null>(null);
+  const labelLayerRef = useRef<L.TileLayer | null>(null);
+  const labelLayerOrthoRef = useRef<L.TileLayer | null>(null);
+  const [showOrtho, setShowOrtho] = useState(false);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
-    const map = L.map(containerRef.current).setView([22.38, 114.05], 11);
+    const map = L.map(containerRef.current, {
+      zoomControl: false // We will move it up to not overlap with our custom button
+    }).setView([22.38, 114.05], 11);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    L.control.zoom({ position: 'topleft' }).addTo(map);
+
+    const landsDAttribution = '&copy; <a href="https://api.portal.hkmapservice.gov.hk/disclaimer" target="_blank">Map from Lands Department</a>';
+
+    // Topographic Basemap
+    topoLayerRef.current = L.tileLayer('https://mapapi.geodata.gov.hk/gs/api/v1.0.0/xyz/basemap/wgs84/{z}/{x}/{y}.png', {
+      attribution: landsDAttribution,
       maxZoom: 19,
-    }).addTo(map);
+    });
+
+    // Orthophoto (Imagery)
+    orthoLayerRef.current = L.tileLayer('https://mapapi.geodata.gov.hk/gs/api/v1.0.0/xyz/imagery/wgs84/{z}/{x}/{y}.png', {
+      attribution: landsDAttribution,
+      maxZoom: 19,
+    });
+
+    // English Labels for Topo (transparent)
+    labelLayerRef.current = L.tileLayer('https://mapapi.geodata.gov.hk/gs/api/v1.0.0/xyz/label/hk/en/wgs84/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+    });
+    
+    // English Labels for Ortho (might need different contrast or just use the same, CSDI provides generic label layer)
+    labelLayerOrthoRef.current = L.tileLayer('https://mapapi.geodata.gov.hk/gs/api/v1.0.0/xyz/label/hk/en/wgs84/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+    });
+
+    // Initial state: Topo map
+    topoLayerRef.current.addTo(map);
+    labelLayerRef.current.addTo(map);
 
     mapRef.current = map;
 
@@ -32,6 +65,35 @@ const ProjectMap: React.FC<ProjectMapProps> = ({ data, selectedId, onSelectFeatu
       }
     };
   }, []);
+
+  // Effect to handle switching between Ortho and Topo
+  useEffect(() => {
+    if (!mapRef.current || !topoLayerRef.current || !orthoLayerRef.current || !labelLayerRef.current || !labelLayerOrthoRef.current) return;
+
+    const map = mapRef.current;
+
+    if (showOrtho) {
+      if (map.hasLayer(topoLayerRef.current)) map.removeLayer(topoLayerRef.current);
+      if (map.hasLayer(labelLayerRef.current)) map.removeLayer(labelLayerRef.current);
+      
+      orthoLayerRef.current.addTo(map);
+      labelLayerOrthoRef.current.addTo(map);
+    } else {
+      if (map.hasLayer(orthoLayerRef.current)) map.removeLayer(orthoLayerRef.current);
+      if (map.hasLayer(labelLayerOrthoRef.current)) map.removeLayer(labelLayerOrthoRef.current);
+      
+      topoLayerRef.current.addTo(map);
+      labelLayerRef.current.addTo(map);
+    }
+    
+    // Ensure markers are always on top
+    Object.values(markersRef.current).forEach((marker: L.Marker) => {
+      if (marker.options.zIndexOffset !== undefined) {
+         marker.setZIndexOffset(marker.options.zIndexOffset);
+      }
+    });
+
+  }, [showOrtho]);
 
   useEffect(() => {
     if (!mapRef.current) return;
@@ -170,7 +232,26 @@ const ProjectMap: React.FC<ProjectMapProps> = ({ data, selectedId, onSelectFeatu
     }
   }, [selectedId]);
 
-  return <div ref={containerRef} className="h-full w-full" />;
+  return (
+    <div className="relative h-full w-full">
+      <div ref={containerRef} className="absolute inset-0 z-0" />
+      <div className="absolute top-4 right-4 z-[400] bg-white rounded-lg shadow-md border border-slate-200 p-1 flex items-center">
+        <button
+          onClick={() => setShowOrtho(false)}
+          className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${!showOrtho ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}
+        >
+          Map
+        </button>
+        <button
+          onClick={() => setShowOrtho(true)}
+          className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors flex items-center gap-1.5 ${showOrtho ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}
+        >
+          <Layers className="w-3.5 h-3.5" />
+          Satellite
+        </button>
+      </div>
+    </div>
+  );
 };
 
 export default ProjectMap;

@@ -49,7 +49,6 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
           </div>
           <h1 className="text-2xl font-bold text-white tracking-tight">LPMit TOMS</h1>
           <p className="text-sm text-gray-400 mt-1">Task Order Management System</p>
-          <p className="text-xs text-gray-500 mt-0.5">CE 47/2022 (GE) - CEDD/GEO/LPM</p>
         </div>
 
         {/* Login Card */}

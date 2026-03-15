@@ -31,6 +31,7 @@ interface AppContextType {
     updateFeature: (feature: ProjectFeature) => void;
     addFeature: (feature: ProjectFeature) => void;
     deleteFeature: (id: string) => void;
+    reorderFeatures: (orderedFeatures: ProjectFeature[]) => void;
     // Task Orders
     updateTaskOrder: (to: TaskOrder) => void;
     addTaskOrder: (to: TaskOrder) => void;
@@ -149,6 +150,31 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setState(prev => ({ ...prev, features: prev.features.filter(f => f.id !== id) }));
     };
 
+    const reorderFeatures = (orderedFeatures: ProjectFeature[]) => {
+        setState(prev => {
+            // Re-assign the 'no' property based on the new array order
+            const renumbered = orderedFeatures.map((f, i) => ({ ...f, no: i + 1 }));
+            
+            // To be safe, if orderedFeatures doesn't contain all features (e.g. filtered), 
+            // we should only update the ones that were reordered. But in our case, 
+            // orderedData in ProjectList is usually all features of the current view.
+            // If the user is viewing a filtered list and re-orders, updating 'no' simply from 1 to N 
+            // of the filtered list might overwrite absolute rankings if not careful.
+            // Let's assume all features for the agreement are being re-ordered.
+            
+            // If we only reorder the active agreement's features:
+            const activeAgreementFeatures = renumbered;
+            const otherAgreementFeatures = prev.features.filter(f => 
+              !activeAgreementFeatures.find(af => af.id === f.id)
+            );
+
+            return {
+              ...prev,
+              features: [...activeAgreementFeatures, ...otherAgreementFeatures].sort((a,b) => a.no - b.no)
+            };
+        });
+    };
+
     const updateTaskOrder = (to: TaskOrder) => {
         setState(prev => ({ ...prev, taskOrders: prev.taskOrders.map(t => t.id === to.id ? to : t) }));
     };
@@ -211,7 +237,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             state,
             setActiveAgreementId,
             undoStack, redoStack, undo, redo, pushHistory, updateColumnOrder,
-            updateFeature, addFeature, deleteFeature,
+            updateFeature, addFeature, deleteFeature, reorderFeatures,
             updateTaskOrder, addTaskOrder, deleteTaskOrder,
             updateInvoice, addInvoice, deleteInvoice,
             updateContract, addContract, deleteContract,
